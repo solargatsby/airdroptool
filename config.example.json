@@ -1,0 +1,26 @@
+{
+  "AirdropTool": {
+    "rpcServer": {
+      "port": 8060
+    },
+    "log": {
+      "level": "info",
+      "file": "./log/airdrop_tool.log"
+    },
+    "orm": {
+      "type": "mysql",
+      "host": "127.0.0.1",
+      "port": 3306,
+      "username": "root",
+      "password": "12345678",
+      "database": "airdroptool",
+      "synchronize": true,
+      "logging": false
+    },
+    "chain": [
+      {
+
+      }
+    ]
+  }
+}
