@@ -75,7 +75,7 @@ export class AirdropRequestDB {
       .createQueryBuilder()
       .where("airdropName = :airdropName", { airdropName })
       .andWhere(
-        `status in (${AIRDROP_REQUEST_INIT},${AIRDROP_REQUEST_PENDING},${AIRDROP_REQUEST_PROCESSING})`
+        `status in (${AIRDROP_REQUEST_PENDING},${AIRDROP_REQUEST_PROCESSING})`
       )
       .orderBy("case when status = 2 then 1 else 0 end", "DESC")
       .orderBy("id", "ASC")

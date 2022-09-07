@@ -70,10 +70,7 @@ export class EvmHandler {
       `EvmHandler airdrop start requestId:${request.id} airdropName:${this.cfg.airdropName} campaignId:${request.campaignId} chain:${request.chain} contractAddress:${request.contractAddress}`
     );
 
-    if (
-      request.status === AIRDROP_REQUEST_INIT ||
-      request.status === AIRDROP_REQUEST_PENDING
-    ) {
+    if (request.status === AIRDROP_REQUEST_PENDING) {
       request.status = AIRDROP_REQUEST_PROCESSING;
       await DefaultCore.airdropRequestDB.updateAirdropRequest(request);
     }

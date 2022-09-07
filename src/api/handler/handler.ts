@@ -42,6 +42,7 @@ export async function newAirdrop(params: {
       "campaignId, chain, tokenURI, receivers required"
     );
   }
+
   const { requestId, error } =
     await GlobalAirdropTool.newTaskonNftAirdropRequest(
       params.chain,

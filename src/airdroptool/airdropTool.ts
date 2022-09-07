@@ -9,12 +9,21 @@ import { DefaultCore } from "../common/core";
 import {
   AIRDROP_REQUEST_CANCELED,
   AIRDROP_REQUEST_COMPLETED,
+  AIRDROP_REQUEST_INIT,
   AIRDROP_REQUEST_PENDING,
   AirdropRequest,
 } from "../db/entity/airdropRequest";
 import { EvmHandler } from "../offchain/evmHandler";
 import { AirdropResult } from "../db/entity/airdropResult";
 import { pagingOptions, pagingResult } from "../common/common";
+import {
+  AIRDROP_REQUEST_TYPE_NEW,
+  AIRDROP_REQUEST_TYPE_RETRY,
+  AirdropRequestNewParams,
+  AirdropRequestQueueItem,
+  AirdropRequestRetryParams,
+} from "./common";
+import { foreverPromise } from "../utils/promise";
 
 const nconf = require("nconf");
 const defaultConfigPath = "./config.json";
@@ -27,6 +36,7 @@ export class AirdropTool {
   private airdropCfg: Map<string, airdropConfig>;
   private jsonRpcServer: AirdropToolJsonRpcServer;
   private evmHandlers: Map<string, EvmHandler>;
+  private requestQueue: AirdropRequestQueueItem[];
 
   constructor(cfgPath?: string) {
     this.jsonRpcServer = new AirdropToolJsonRpcServer();
@@ -34,6 +44,7 @@ export class AirdropTool {
       cfgPath || process.env.AIRDROP_TOOL_CONFIG || defaultConfigPath;
     this.airdropCfg = new Map<string, airdropConfig>();
     this.evmHandlers = new Map<string, EvmHandler>();
+    this.requestQueue = new Array<AirdropRequestQueueItem>();
   }
 
   async init(): Promise<void> {
@@ -67,11 +78,44 @@ export class AirdropTool {
 
   async start(): Promise<void> {
     await this.init();
+    this.checkInQueue();
     this.evmHandlers.forEach((handler) => {
       handler.start();
     });
     this.jsonRpcServer.start(this.cfg.rpcServer?.port!);
     logger.info(`AirdropTool rpc server start at:${this.cfg.rpcServer?.port}`);
+  }
+
+  checkInQueue() {
+    foreverPromise(
+      async (times): Promise<void> => {
+        const request = this.requestQueue.shift();
+        if (request === undefined) {
+          return;
+        }
+        let params;
+        switch (request.type) {
+          case AIRDROP_REQUEST_TYPE_NEW:
+            params = request.params as AirdropRequestNewParams;
+            await this.doNewTaskonNftAirdropRequest(
+              params.requestId,
+              params.receivers
+            );
+            break;
+          case AIRDROP_REQUEST_TYPE_RETRY:
+            params = request.params as AirdropRequestRetryParams;
+            await this.doRetryTaskonNftAirdropRequest(
+              params.requestId,
+              params.receivers
+            );
+            break;
+        }
+      },
+      {
+        onResolvedInterval: 1000,
+        onRejectedInterval: 1000,
+      }
+    );
   }
 
   async cancelTaskonNftAirdropRequest(
@@ -105,26 +149,6 @@ export class AirdropTool {
     return undefined;
   }
 
-  async retryTaskonNftAirdropRequest(
-    requestId: number,
-    receivers?: string[]
-  ): Promise<Error | undefined> {
-    const request =
-      await DefaultCore.airdropRequestDB.getAirdropRequestByRequestId(
-        requestId
-      );
-    if (request === null) {
-      return new Error("cannot found airdrop info");
-    }
-    await DefaultCore.airdropResultDB.resetFailedAirdropResults({
-      requestId,
-      receivers,
-    });
-    request.status = AIRDROP_REQUEST_PENDING;
-    await DefaultCore.airdropRequestDB.updateAirdropRequest(request);
-    return;
-  }
-
   async newTaskonNftAirdropRequest(
     chain: string,
     campaignId: number,
@@ -134,54 +158,117 @@ export class AirdropTool {
     requestId?: number;
     error?: Error;
   }> {
+    let requestId = 0;
     const request =
       await DefaultCore.airdropRequestDB.getAirdropRequestByCampaignId(
         campaignId
       );
-    if (request != undefined) {
-      await DefaultCore.airdropResultDB.newAirdropResults(
-        receivers.map((receiver) => {
-          return {
-            requestId: request.id,
-            receiver,
-          };
-        })
-      );
-      request.limit = await DefaultCore.airdropResultDB.getCountOfAirdropResult(
-        request.id
-      );
-      if (request.status === AIRDROP_REQUEST_COMPLETED) {
-        request.status = AIRDROP_REQUEST_PENDING;
-        await DefaultCore.airdropRequestDB.updateAirdropRequest(request);
+    if (request) {
+      requestId = request.id;
+    } else {
+      const airdropName = getTaskonNftAidropConfigName(chain);
+      const airdropConfig = this.getAirdropConfig(airdropName);
+      if (airdropConfig === undefined) {
+        return { error: new Error(`invalid chain:${chain}`) };
       }
-      return { requestId: request.id };
+      requestId = await DefaultCore.airdropRequestDB.newAirdropRequest({
+        airdropName: airdropConfig.airdropName,
+        campaignId,
+        category: airdropConfig.category,
+        chain: airdropConfig.chain,
+        contractAddress: airdropConfig.contractAddress,
+        limit: receivers.length,
+        tokenURI: tokenURI,
+        startTime: new Date(),
+      });
     }
 
-    const airdropName = getTaskonNftAidropConfigName(chain);
-    const airdropConfig = this.getAirdropConfig(airdropName);
-    if (airdropConfig === undefined) {
-      return { error: new Error(`invalid chain:${chain}`) };
-    }
-    const requestId = await DefaultCore.airdropRequestDB.newAirdropRequest({
-      airdropName: airdropConfig.airdropName,
-      campaignId,
-      category: airdropConfig.category,
-      chain: airdropConfig.chain,
-      contractAddress: airdropConfig.contractAddress,
-      limit: receivers.length,
-      tokenURI: tokenURI,
-      startTime: new Date(),
+    this.requestQueue.push({
+      type: AIRDROP_REQUEST_TYPE_NEW,
+      params: {
+        requestId,
+        receivers,
+      },
     });
+    return { requestId };
+  }
 
+  async retryTaskonNftAirdropRequest(
+    requestId: number,
+    receivers?: string[]
+  ): Promise<Error | undefined> {
+    this.requestQueue.push({
+      type: AIRDROP_REQUEST_TYPE_RETRY,
+      params: {
+        requestId: requestId,
+        receivers,
+      },
+    });
+    return;
+  }
+
+  async doRetryTaskonNftAirdropRequest(
+    requestId: number,
+    receivers?: string[]
+  ): Promise<void> {
+    const request =
+      await DefaultCore.airdropRequestDB.getAirdropRequestByRequestId(
+        requestId
+      );
+    if (request === null) {
+      logger.error(
+        "doRetryTaskonNftAirdropRequest cannot found airdropRequest by id:",
+        requestId
+      );
+      return;
+    }
+    await DefaultCore.airdropResultDB.resetFailedAirdropResults({
+      requestId,
+      receivers,
+    });
+    if (request.status === AIRDROP_REQUEST_COMPLETED) {
+      request.status = AIRDROP_REQUEST_PENDING;
+    }
+    await DefaultCore.airdropRequestDB.updateAirdropRequest(request);
+    return;
+  }
+
+  async doNewTaskonNftAirdropRequest(
+    requestId: number,
+    receivers: string[]
+  ): Promise<void> {
+    const request =
+      await DefaultCore.airdropRequestDB.getAirdropRequestByRequestId(
+        requestId
+      );
+    if (!request) {
+      logger.error(
+        "doNewTaskonNftAirdropRequest cannot found airdropRequest by id:",
+        requestId
+      );
+      return;
+    }
     await DefaultCore.airdropResultDB.newAirdropResults(
       receivers.map((receiver) => {
         return {
-          requestId,
+          requestId: request.id,
           receiver,
         };
       })
     );
-    return { requestId: requestId };
+    request.limit =
+      (await DefaultCore.airdropResultDB.getCountOfAirdropResult(request.id)) +
+      receivers.length;
+
+    if (
+      request.status === AIRDROP_REQUEST_INIT ||
+      request.status === AIRDROP_REQUEST_COMPLETED
+    ) {
+      request.status = AIRDROP_REQUEST_PENDING;
+    }
+
+    await DefaultCore.airdropRequestDB.updateAirdropRequest(request);
+    return;
   }
 
   getAirdropConfig(airdropName: string): airdropConfig | undefined {
