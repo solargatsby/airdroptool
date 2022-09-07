@@ -1,4 +1,5 @@
 import {
+  JSONRPC,
   JSONRPCErrorResponse,
   JSONRPCResponse,
   JSONRPCServer,
@@ -6,7 +7,6 @@ import {
 } from "json-rpc-2.0";
 import express from "express";
 import cors from "cors";
-import { JSONRPC } from "json-rpc-2.0";
 import bodyParser from "body-parser";
 import { logger } from "../common/logger";
 import {

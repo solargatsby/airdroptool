@@ -15,6 +15,12 @@ export class AirdropRequest {
   campaignId: number;
 
   @Column()
+  airdropName: string;
+
+  @Column()
+  category: string;
+
+  @Column()
   chain: string;
 
   @Column({ type: "tinyint", default: AIRDROP_REQUEST_INIT })
@@ -22,6 +28,12 @@ export class AirdropRequest {
 
   @Column()
   contractAddress: string;
+
+  @Column()
+  limit: number;
+
+  @Column({ type: "varchar", length: 512 })
+  tokenURI: string;
 
   @Column()
   startTime: Date;

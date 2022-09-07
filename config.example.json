@@ -17,9 +17,15 @@
       "synchronize": true,
       "logging": false
     },
-    "chain": [
+    "airdrop": [
       {
-
+        "airdropName": "taskon-nft-polygon",
+        "category": "taskon",
+        "chain": "polygon",
+        "rpc": "",
+        "privateKey": "",
+        "contractAddress": "",
+        "abiPath": "./abi/taskon-manager.abi.json"
       }
     ]
   }

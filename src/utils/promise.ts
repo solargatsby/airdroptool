@@ -43,12 +43,11 @@ export async function retryPromise<T>(
 ): Promise<T> {
   let errorTimes = 0;
   const { onRejectedInterval = 300, onRejected, maxRetryTimes = 5 } = options;
-
   function internal(): Promise<T> {
     return promiseThunk().catch(async (err: unknown) => {
       errorTimes++;
       if (onRejected) await onRejected(err, errorTimes);
-      if (errorTimes <= maxRetryTimes)
+      if (errorTimes < maxRetryTimes)
         return asyncSleep(onRejectedInterval).then(internal);
       throw new TooManyRetriesError(errorTimes, err);
     });

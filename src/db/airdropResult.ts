@@ -11,21 +11,23 @@ export class AirdropResultDB {
   }
 
   async newAirdropResults(results: IAirdropResult[]): Promise<InsertResult> {
-      const now = new Date()
+    const now = new Date();
     return await this.repository
       .createQueryBuilder()
       .insert()
-      .values(results.map(result =>{
+      .values(
+        results.map((result) => {
           return {
-              requestId: result.requestId,
-              receiver: result.receiver,
-              status:result.status ?? AIRDROP_RESULT_INIT,
-              txHash: result.txHash ?? "",
-              errorMsg:result.errorMsg ?? "",
-              createAt: now,
-              updateAt: now,
-          }
-      }))
+            requestId: result.requestId,
+            receiver: result.receiver,
+            status: result.status ?? AIRDROP_RESULT_INIT,
+            txHash: result.txHash ?? "",
+            errorMsg: result.errorMsg ?? "",
+            createAt: now,
+            updateAt: now,
+          };
+        })
+      )
       .orUpdate({
         conflict_target: ["requestId", "receiver"],
         overwrite: ["updateAt"],
@@ -33,39 +35,43 @@ export class AirdropResultDB {
       .execute();
   }
 
-  async updateAirdropResult(result: IAirdropResult): Promise<UpdateResult> {
+  async updateAirdropResults(
+    requestId: number,
+    status: number,
+    txHash: string,
+    errorMsg: string,
+    receivers: string[]
+  ): Promise<UpdateResult> {
     return await this.repository
       .createQueryBuilder()
       .update()
       .set({
-        status: result.status ?? AIRDROP_RESULT_INIT,
-        txHash: result.txHash ?? "",
-        errorMsg: result.errorMsg ?? "",
+        status: status,
+        txHash: txHash,
+        errorMsg: errorMsg,
         updateAt: new Date(),
       })
-      .where("requestId = :requestId and receiver = :receiver", {
-        requestId: result.requestId,
-        receiver: result.receiver,
-      })
+      .where(
+        `requestId = ${requestId} and receiver in (${receivers
+          .map((receiver) => {
+            return `'${receiver}'`;
+          })
+          .join(",")})`
+      )
       .execute();
   }
 
-  async getAirdropResultByReceiver(
-    requestId: number,
-    receiver: string
-  ): Promise<AirdropResult | null> {
+  async getCountOfAirdropResult(requestId: number): Promise<number> {
     return await this.repository
       .createQueryBuilder()
-      .where("requestId = :requestId and receiver = :receiver", {
-        requestId,
-        receiver,
-      })
-      .getOne();
+      .where("requestId = :requestId", { requestId })
+      .getCount();
   }
 
   async getAirdropResults(
     requestId: number,
     options: {
+      receivers?: string[];
       status?: number[];
       page: pagingOptions;
     }
@@ -81,7 +87,16 @@ export class AirdropResultDB {
       .offset(page.pageNo * page.size)
       .orderBy("id", "DESC");
     if (options.status != undefined) {
-      builder.andWhere("status in (:status)", { status: options.status.join(",") });
+      builder.andWhere(`status in (${options.status.join(",")})`);
+    }
+    if (options.receivers != undefined && options.receivers.length !== 0) {
+      builder.andWhere(
+        `receiver in (${options.receivers
+          .map((receiver) => {
+            return `'${receiver}'`;
+          })
+          .join(",")})`
+      );
     }
     const [data, total] = await builder.getManyAndCount();
     return {

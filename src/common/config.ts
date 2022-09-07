@@ -1,3 +1,9 @@
+export const AIRDROP_CATEGORY_TASKON = "taskon";
+
+export function getTaskonNftAidropConfigName(chain: string): string {
+  return `taskon-nft-${chain.toLowerCase()}`;
+}
+
 export interface ormConfig {
   type: "mysql";
   host: string;
@@ -18,18 +24,19 @@ export interface logConfig {
   level?: string;
 }
 
-export interface chainConfig {
-  cfgName: string; //config name
+export interface airdropConfig {
+  airdropName: string; //airdrop name
+  category: string;
   chain: string;
   rpc: string;
   privateKey: string;
   contractAddress: string;
-  abiPath:string;
+  abiPath: string;
 }
 
 export interface config {
   orm?: ormConfig;
   log?: logConfig;
   rpcServer?: rpcServerConfig;
-  chain?: chainConfig[];
+  airdrop?: airdropConfig[];
 }
