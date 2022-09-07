@@ -15,10 +15,11 @@ export function getDefaultHandlerRegister(): IAirdropToolHandlerRegister {
     getDefaultMiddlewareRegister()
   );
   defaultRegister.register("newAirdrop", newAirdrop);
+  defaultRegister.register("retryAirdrop", retryAirdrop);
+  defaultRegister.register("cancelAirdrop", cancelAirdrop);
   defaultRegister.register("getAirdropRequest", getAirdropRequest);
   defaultRegister.register("getAirdropRequestList", getAirdropRequestList);
   defaultRegister.register("getAirdropResult", getAirdropResult);
-  defaultRegister.register("cancelAirdrop", cancelAirdrop);
   return defaultRegister;
 }
 
@@ -57,6 +58,75 @@ export async function newAirdrop(params: {
   return AirdropToolResponse.fromData({
     requestId,
   });
+}
+
+export async function retryAirdrop(params: {
+  requestId?: number;
+  campaignId?: number;
+  receivers?: string[];
+}): Promise<AirdropToolResponse> {
+  if (!notUndefinedOne(params.campaignId, params.requestId)) {
+    return AirdropToolResponse.fromError(
+      ErrorCode.InvalidParams,
+      "requestId or campaignId required"
+    );
+  }
+
+  let requestId = params.requestId;
+  if (requestId === undefined) {
+    const request = await GlobalAirdropTool.getAirdropRequest({
+      campaignId: params.campaignId!,
+    });
+    if (!request) {
+      return AirdropToolResponse.fromError(
+        ErrorCode.InvalidParams,
+        "invalid campaignId"
+      );
+    }
+    requestId = request.id;
+  }
+
+  await GlobalAirdropTool.retryTaskonNftAirdropRequest(
+    requestId,
+    params.receivers
+  );
+  return AirdropToolResponse.fromData("success");
+}
+
+export async function cancelAirdrop(params: {
+  requestId?: number;
+  campaignId?: number;
+}): Promise<AirdropToolResponse> {
+  if (!notUndefinedOne(params.campaignId, params.requestId)) {
+    return AirdropToolResponse.fromError(
+      ErrorCode.InvalidParams,
+      "requestId or campaignId required"
+    );
+  }
+
+  let requestId = params.requestId;
+  if (requestId === undefined) {
+    const request = await GlobalAirdropTool.getAirdropRequest({
+      campaignId: params.campaignId!,
+    });
+    if (!request) {
+      return AirdropToolResponse.fromError(
+        ErrorCode.InvalidParams,
+        "invalid campaignId"
+      );
+    }
+    requestId = request.id;
+  }
+  const error = await GlobalAirdropTool.cancelTaskonNftAirdropRequest(
+    requestId
+  );
+  if (error !== undefined) {
+    return AirdropToolResponse.fromError(
+      ErrorCode.InvalidParams,
+      error?.message
+    );
+  }
+  return AirdropToolResponse.fromData(true);
 }
 
 export async function getAirdropRequest(params: {
@@ -123,40 +193,4 @@ export async function getAirdropResult(params: {
     page: normalizePageOptions(params.page),
   });
   return AirdropToolResponse.fromData(results);
-}
-
-export async function cancelAirdrop(params: {
-  requestId?: number;
-  campaignId?: number;
-}): Promise<AirdropToolResponse> {
-  if (!notUndefinedOne(params.campaignId, params.requestId)) {
-    return AirdropToolResponse.fromError(
-      ErrorCode.InvalidParams,
-      "requestId or campaignId required"
-    );
-  }
-
-  let requestId = params.requestId;
-  if (requestId === undefined) {
-    const request = await GlobalAirdropTool.getAirdropRequest({
-      campaignId: params.campaignId!,
-    });
-    if (!request) {
-      return AirdropToolResponse.fromError(
-        ErrorCode.InvalidParams,
-        "invalid campaignId"
-      );
-    }
-    requestId = request.id;
-  }
-  const error = await GlobalAirdropTool.cancelTaskonNftAirdropRequest(
-    requestId
-  );
-  if (error !== undefined) {
-    return AirdropToolResponse.fromError(
-      ErrorCode.InvalidParams,
-      error?.message
-    );
-  }
-  return AirdropToolResponse.fromData(true);
 }

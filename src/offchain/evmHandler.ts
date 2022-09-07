@@ -1,4 +1,4 @@
-import { ethers, ContractTransaction } from "ethers";
+import { ethers, ContractTransaction, BigNumber } from "ethers";
 import { readFileSync } from "fs";
 import { foreverPromise, retryPromise } from "../utils/promise";
 import { logger } from "../common/logger";
@@ -244,19 +244,30 @@ export class EvmHandler {
     }
   }
 
+  async getGasPrice(): Promise<{
+    maxFeePerGas: BigNumber;
+    maxPriorityFeePerGas: BigNumber;
+  }> {
+    const gasPrice = await this.provider.getGasPrice();
+    return {
+      maxFeePerGas: gasPrice.mul(2),
+      maxPriorityFeePerGas: gasPrice,
+    };
+  }
+
   async taskonNftMint(
     request: IAirdropRequest,
     receivers: string[]
   ): Promise<ContractTransaction> {
-    const gasPrice = await this.provider.getGasPrice();
+    const { maxFeePerGas, maxPriorityFeePerGas } = await this.getGasPrice();
     return await this.contract.batchAirdrop(
       request.campaignId,
       request.limit,
       receivers,
       request.tokenURI,
       {
-        maxFeePerGas: gasPrice.mul(2),
-        maxPriorityFeePerGas: gasPrice,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
       }
     );
   }
@@ -269,7 +280,7 @@ export class EvmHandler {
     errorMsg: string;
     receipt: ethers.providers.TransactionReceipt;
   }> {
-    let retryTimes = 60;
+    let retryTimes = 90;
     let errorMsg = "";
     let status = AIRDROP_RESULT_FAILED;
     let receipt;
@@ -283,9 +294,7 @@ export class EvmHandler {
           logger.error(
             `sendTx getTransactionReceipt requestId:${request.id} airdropName:${this.cfg.airdropName} campaignId:${request.campaignId} error:${err}`
           );
-          if (times == retryTimes) {
-            errorMsg = `${err}`;
-          }
+          errorMsg = `${err}`;
         },
         onRejectedInterval: 10000,
         maxRetryTimes: retryTimes,

@@ -98,13 +98,13 @@ query airdrop result
 
 params
 
-| name       | option or required | type     | description                                                    | 
-|------------| ----------------- |----------|----------------------------------------------------------------|
-| requestId  | option | number   | id or airdrop task                                             |
-| campaignId | option | number   | campaign id of airdrop                                         |
+| name       | option or required | type     | description      | 
+|------------| ----------------- |----------|------------------------|
+| requestId  | option | number   | id or airdrop task     |
+| campaignId | option | number   | campaign id of airdrop |
 | status     | option | number[] | INIT = 0, PENDING = 1, PROCESSING = 2, SUCCESS = 3, FAILED = 4 |
-| receivers  | option | string[] | receivers of nft                                               |
-| page       | option | object   | using pageNo and size to paging, max page size is 1000         |
+| receivers  | option | string[] | receivers of nft       |
+| page       | option | object   | using pageNo and size to paging, max page size is 1000 |
 
 example
 
@@ -129,10 +129,10 @@ cancel uncomplete airdrop
 
 params
 
-| name       | option or required | type     | description                                                    | 
-|------------| ----------------- |----------|--------------------------------|
-| requestId  | option | number   | id or airdrop task                                             |
-| campaignId | option | number   | campaign id of airdrop                                         |
+| name       | option or required | type     | description | 
+|------------| ----------------- |----------|-------------|
+| requestId  | option | number   | id of airdrop task |
+| campaignId | option | number   | campaign id of airdrop |
 
 example
 
@@ -140,6 +140,31 @@ example
 {
     "jsonrpc": "2.0",
     "method": "cancelAirdrop",
+    "params": {
+        "requestId": 7
+    },
+    "id": 1
+}
+```
+
+6、retryAirdrop
+
+retry failed airdrop result
+
+params
+
+| name       | option or required | type     | description                                                | 
+|------------| ----------------- |----------|------------------------------------------------------------|
+| requestId  | option | number   | id of airdrop task                                         |
+| campaignId | option | number   | campaign id of airdrop                                     |
+| receivers  | option | string[] | receivers of nft, if not sepcific, retry all failed result |
+
+example
+
+```json
+{
+    "jsonrpc": "2.0",
+    "method": "retryAirdrop",
     "params": {
         "requestId": 7
     },

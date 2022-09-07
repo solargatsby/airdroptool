@@ -105,6 +105,26 @@ export class AirdropTool {
     return undefined;
   }
 
+  async retryTaskonNftAirdropRequest(
+    requestId: number,
+    receivers?: string[]
+  ): Promise<Error | undefined> {
+    const request =
+      await DefaultCore.airdropRequestDB.getAirdropRequestByRequestId(
+        requestId
+      );
+    if (request === null) {
+      return new Error("cannot found airdrop info");
+    }
+    await DefaultCore.airdropResultDB.resetFailedAirdropResults({
+      requestId,
+      receivers,
+    });
+    request.status = AIRDROP_REQUEST_PENDING;
+    await DefaultCore.airdropRequestDB.updateAirdropRequest(request);
+    return;
+  }
+
   async newTaskonNftAirdropRequest(
     chain: string,
     campaignId: number,

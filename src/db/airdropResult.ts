@@ -1,5 +1,9 @@
 import { Connection, InsertResult, Repository, UpdateResult } from "typeorm";
-import { AIRDROP_RESULT_INIT, AirdropResult } from "./entity/airdropResult";
+import {
+  AIRDROP_RESULT_FAILED,
+  AIRDROP_RESULT_INIT,
+  AirdropResult,
+} from "./entity/airdropResult";
 import { IAirdropResult } from "./model/IAirdropResult";
 import { pagingOptions, pagingResult } from "../common/common";
 
@@ -59,6 +63,36 @@ export class AirdropResultDB {
           .join(",")})`
       )
       .execute();
+  }
+
+  async resetFailedAirdropResults(options: {
+    requestId: number;
+    receivers?: string[];
+  }): Promise<UpdateResult> {
+    const now = new Date();
+    const builder = this.repository
+      .createQueryBuilder()
+      .where("requestId = :requestId and status = :status", {
+        requestId: options.requestId,
+        status: AIRDROP_RESULT_FAILED,
+      })
+      .update()
+      .set({
+        status: AIRDROP_RESULT_INIT,
+        txHash: "",
+        errorMsg: "",
+        updateAt: now,
+      });
+    if (options.receivers !== undefined && options.receivers.length === 0) {
+      builder.andWhere(
+        `receiver in (${options.receivers
+          .map((receiver) => {
+            return `'${receiver}'`;
+          })
+          .join(",")})`
+      );
+    }
+    return await builder.execute();
   }
 
   async getCountOfAirdropResult(requestId: number): Promise<number> {
