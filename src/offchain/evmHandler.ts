@@ -76,7 +76,7 @@ export class EvmHandler {
     }
 
     let pageNo = 0;
-    let pageSize = 50;
+    let pageSize = 35; //bath size for a tx
     while (true) {
       const requestNow =
         await DefaultCore.airdropRequestDB.getAirdropRequestByRequestId(
