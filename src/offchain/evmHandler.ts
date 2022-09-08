@@ -242,13 +242,36 @@ export class EvmHandler {
   }
 
   async getGasPrice(): Promise<{
-    maxFeePerGas: BigNumber;
-    maxPriorityFeePerGas: BigNumber;
+    gasPrice: BigNumber | null;
+    maxFeePerGas: BigNumber | null;
+    maxPriorityFeePerGas: BigNumber | null;
   }> {
-    const gasPrice = await this.provider.getGasPrice();
+    let { gasPrice, maxFeePerGas, maxPriorityFeePerGas } =
+      await this.provider.getFeeData();
+
+    let supportedEIP1559 = false;
+    if (maxFeePerGas !== null) {
+      maxFeePerGas = maxFeePerGas.mul(2).div(10).add(maxFeePerGas);
+    }
+    if (maxPriorityFeePerGas !== null) {
+      maxPriorityFeePerGas = maxPriorityFeePerGas
+        .mul(2)
+        .div(10)
+        .add(maxPriorityFeePerGas);
+      supportedEIP1559 = true;
+    }
+
+    if (supportedEIP1559) {
+      gasPrice = null;
+    } else {
+      if (gasPrice !== null) {
+        gasPrice = gasPrice.mul(2).div(10).add(gasPrice);
+      }
+    }
     return {
-      maxFeePerGas: gasPrice.mul(2),
-      maxPriorityFeePerGas: gasPrice,
+      gasPrice,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
     };
   }
 
@@ -256,15 +279,14 @@ export class EvmHandler {
     request: IAirdropRequest,
     receivers: string[]
   ): Promise<ContractTransaction> {
-    const { maxFeePerGas, maxPriorityFeePerGas } = await this.getGasPrice();
+    const gasPrice = await this.getGasPrice();
     return await this.contract.batchAirdrop(
       request.campaignId,
       request.limit,
       receivers,
       request.tokenURI,
       {
-        maxFeePerGas,
-        maxPriorityFeePerGas,
+        ...gasPrice,
       }
     );
   }
