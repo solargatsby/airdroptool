@@ -119,7 +119,7 @@ export class AirdropResultDB {
       .where("requestId = :requestId", { requestId })
       .limit(page.size)
       .offset(page.pageNo * page.size)
-      .orderBy("id", "DESC");
+      .orderBy("id", "ASC");
     if (options.status != undefined) {
       builder.andWhere(`status in (${options.status.join(",")})`);
     }
