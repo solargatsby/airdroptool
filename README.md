@@ -1,9 +1,14 @@
 # AirdropTool
 
+AirdropTool is a tool to airdrop token or nft.
+
 #  How to start?
-- rename config.example.json to config.json and set config.json correctly;
-- using ```yarn install``` to install dependencies;
-- using ```yarn start``` to start airdrop tool;
+- Rename config.example.json to config.json and set config.json correctly;
+- Install [nodejs](https://nodejs.org/en/download/);
+- Using ```npm install -g npm``` to install npm;
+- Using ```npm install --g yarn``` to install yarn;
+- Using ```yarn install``` to install dependencies;
+- Using ```yarn start``` to start airdrop tool;
 
 # API docs
 
