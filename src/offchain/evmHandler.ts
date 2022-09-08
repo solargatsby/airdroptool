@@ -193,6 +193,14 @@ export class EvmHandler {
       return;
     }
 
+    await DefaultCore.airdropResultDB.updateAirdropResults(
+        request.id,
+        AIRDROP_RESULT_PROCESSING,
+        txHash,
+        '',
+        receivers
+    )
+
     await tx.wait();
 
     const { status, errorMsg } = await this.getTransactionReceipt(
