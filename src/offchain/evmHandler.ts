@@ -257,30 +257,11 @@ export class EvmHandler {
     maxFeePerGas: BigNumber | null;
     maxPriorityFeePerGas: BigNumber | null;
   }> {
-    let { gasPrice, maxFeePerGas, maxPriorityFeePerGas } =
-      await this.provider.getFeeData();
-
-    let supportedEIP1559 = false;
-    if (maxFeePerGas !== null) {
-      maxFeePerGas = maxFeePerGas.mul(2).div(10).add(maxFeePerGas);
-    }
-    if (maxPriorityFeePerGas !== null) {
-      maxPriorityFeePerGas = maxPriorityFeePerGas
-        .mul(2)
-        .div(10)
-        .add(maxPriorityFeePerGas);
-      supportedEIP1559 = true;
-    }
-
-    if (supportedEIP1559) {
-      gasPrice = null;
-    } else {
-      if (gasPrice !== null) {
-        gasPrice = gasPrice.mul(2).div(10).add(gasPrice);
-      }
-    }
+    const gasPrice = await this.provider.getGasPrice()
+    const maxFeePerGas = gasPrice.mul(3)
+    const maxPriorityFeePerGas = gasPrice
     return {
-      gasPrice,
+      gasPrice:null,
       maxFeePerGas,
       maxPriorityFeePerGas,
     };
