@@ -32,7 +32,7 @@ export class AirdropRequest {
   @Column()
   limit: number;
 
-  @Column({ type: "varchar", length: 512 })
+  @Column({ type: "text" })
   tokenURI: string;
 
   @Column()
