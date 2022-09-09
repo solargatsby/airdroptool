@@ -6,7 +6,6 @@ import { DefaultCore } from "../common/core";
 import {
   AIRDROP_REQUEST_CANCELED,
   AIRDROP_REQUEST_COMPLETED,
-  AIRDROP_REQUEST_INIT,
   AIRDROP_REQUEST_PENDING,
   AIRDROP_REQUEST_PROCESSING,
   AirdropRequest,
@@ -21,6 +20,7 @@ import {
 } from "../db/entity/airdropResult";
 import { airdropConfig } from "../common/config";
 import { IAirdropRequest } from "../db/model/IAirdropRequest";
+import * as fs from "fs";
 
 export class EvmHandler {
   public handlerName: string;
@@ -34,10 +34,14 @@ export class EvmHandler {
     this.handlerName = cfg.airdropName;
     this.chain = cfg.chain.toLowerCase();
     this.provider = new ethers.providers.JsonRpcProvider(cfg.rpc);
-    this.wallet = new ethers.Wallet(cfg.privateKey).connect(this.provider);
-    const abi = readFileSync(cfg.abiPath).toString("utf8");
-    this.contract = new ethers.Contract(cfg.contractAddress, abi, this.wallet);
-    this.iface = new ethers.utils.Interface(abi);
+    this.iface = new ethers.utils.Interface(readFileSync(cfg.abiPath).toString("utf8"));
+    if (this.cfg.keyStore){
+      const ks = fs.readFileSync(this.cfg.keyStore).toString('utf-8')
+      this.wallet = ethers.Wallet.fromEncryptedJsonSync(ks, this.cfg.keyStorePassword!).connect(this.provider)
+    }else{
+      this.wallet = new ethers.Wallet(this.cfg.privateKey!).connect(this.provider);
+    }
+    this.contract = new ethers.Contract(this.cfg.contractAddress, this.iface, this.wallet);
   }
 
   start(): void {

@@ -29,7 +29,9 @@ export interface airdropConfig {
   category: string;
   chain: string;
   rpc: string;
-  privateKey: string;
+  privateKey?: string;
+  keyStore?:string;
+  keyStorePassword?:string;
   contractAddress: string;
   abiPath: string;
 }
