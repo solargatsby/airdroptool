@@ -4,6 +4,7 @@ export const AIRDROP_REQUEST_TYPE_RETRY = 1;
 export interface AirdropRequestNewParams {
   requestId: number;
   receivers: string[];
+  limit: number;
 }
 
 export interface AirdropRequestRetryParams {

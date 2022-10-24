@@ -28,6 +28,7 @@ export async function newAirdrop(params: {
   chain: string;
   tokenURI: string;
   receivers: string[];
+  limit: number | undefined;
 }): Promise<AirdropToolResponse> {
   if (
     !notUndefinedAll(
@@ -48,7 +49,8 @@ export async function newAirdrop(params: {
       params.chain,
       params.campaignId,
       params.tokenURI,
-      params.receivers
+      params.receivers,
+      params.limit
     );
   if (error !== undefined) {
     return AirdropToolResponse.fromError(

@@ -30,8 +30,8 @@ export interface airdropConfig {
   chain: string;
   rpc: string;
   privateKey?: string;
-  keyStore?:string;
-  keyStorePassword?:string;
+  keyStore?: string;
+  keyStorePassword?: string;
   contractAddress: string;
   abiPath: string;
 }

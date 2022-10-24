@@ -34,14 +34,25 @@ export class EvmHandler {
     this.handlerName = cfg.airdropName;
     this.chain = cfg.chain.toLowerCase();
     this.provider = new ethers.providers.JsonRpcProvider(cfg.rpc);
-    this.iface = new ethers.utils.Interface(readFileSync(cfg.abiPath).toString("utf8"));
-    if (this.cfg.keyStore){
-      const ks = fs.readFileSync(this.cfg.keyStore).toString('utf-8')
-      this.wallet = ethers.Wallet.fromEncryptedJsonSync(ks, this.cfg.keyStorePassword!).connect(this.provider)
-    }else{
-      this.wallet = new ethers.Wallet(this.cfg.privateKey!).connect(this.provider);
+    this.iface = new ethers.utils.Interface(
+      readFileSync(cfg.abiPath).toString("utf8")
+    );
+    if (this.cfg.keyStore) {
+      const ks = fs.readFileSync(this.cfg.keyStore).toString("utf-8");
+      this.wallet = ethers.Wallet.fromEncryptedJsonSync(
+        ks,
+        this.cfg.keyStorePassword!
+      ).connect(this.provider);
+    } else {
+      this.wallet = new ethers.Wallet(this.cfg.privateKey!).connect(
+        this.provider
+      );
     }
-    this.contract = new ethers.Contract(this.cfg.contractAddress, this.iface, this.wallet);
+    this.contract = new ethers.Contract(
+      this.cfg.contractAddress,
+      this.iface,
+      this.wallet
+    );
   }
 
   start(): void {
@@ -197,12 +208,12 @@ export class EvmHandler {
     }
 
     await DefaultCore.airdropResultDB.updateAirdropResults(
-        request.id,
-        AIRDROP_RESULT_PROCESSING,
-        txHash,
-        '',
-        receivers
-    )
+      request.id,
+      AIRDROP_RESULT_PROCESSING,
+      txHash,
+      "",
+      receivers
+    );
 
     await tx.wait();
 
@@ -257,11 +268,11 @@ export class EvmHandler {
     maxFeePerGas: BigNumber | null;
     maxPriorityFeePerGas: BigNumber | null;
   }> {
-    const gasPrice = await this.provider.getGasPrice()
-    const maxFeePerGas = gasPrice.mul(3)
-    const maxPriorityFeePerGas = gasPrice
+    const gasPrice = await this.provider.getGasPrice();
+    const maxFeePerGas = gasPrice.mul(3);
+    const maxPriorityFeePerGas = gasPrice;
     return {
-      gasPrice:null,
+      gasPrice: null,
       maxFeePerGas,
       maxPriorityFeePerGas,
     };

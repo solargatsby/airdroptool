@@ -99,7 +99,8 @@ export class AirdropTool {
             params = request.params as AirdropRequestNewParams;
             await this.doNewTaskonNftAirdropRequest(
               params.requestId,
-              params.receivers
+              params.receivers,
+              params.limit
             );
             break;
           case AIRDROP_REQUEST_TYPE_RETRY:
@@ -153,7 +154,8 @@ export class AirdropTool {
     chain: string,
     campaignId: number,
     tokenURI: string,
-    receivers: string[]
+    receivers: string[],
+    limit: number | undefined
   ): Promise<{
     requestId?: number;
     error?: Error;
@@ -171,13 +173,17 @@ export class AirdropTool {
       if (airdropConfig === undefined) {
         return { error: new Error(`invalid chain:${chain}`) };
       }
+      let campaignLimit = receivers.length;
+      if (limit !== undefined && limit > campaignLimit) {
+        campaignLimit = limit;
+      }
       requestId = await DefaultCore.airdropRequestDB.newAirdropRequest({
         airdropName: airdropConfig.airdropName,
         campaignId,
         category: airdropConfig.category,
         chain: airdropConfig.chain,
         contractAddress: airdropConfig.contractAddress,
-        limit: receivers.length,
+        limit: campaignLimit,
         tokenURI: tokenURI,
         startTime: new Date(),
       });
@@ -188,6 +194,7 @@ export class AirdropTool {
       params: {
         requestId,
         receivers,
+        limit,
       },
     });
     return { requestId };
@@ -235,7 +242,8 @@ export class AirdropTool {
 
   async doNewTaskonNftAirdropRequest(
     requestId: number,
-    receivers: string[]
+    receivers: string[],
+    limit: number
   ): Promise<void> {
     const request =
       await DefaultCore.airdropRequestDB.getAirdropRequestByRequestId(
@@ -256,9 +264,11 @@ export class AirdropTool {
         };
       })
     );
-    request.limit =
+
+    const campaignLimit =
       (await DefaultCore.airdropResultDB.getCountOfAirdropResult(request.id)) +
       receivers.length;
+    request.limit = limit > campaignLimit ? limit : campaignLimit;
 
     if (
       request.status === AIRDROP_REQUEST_INIT ||
